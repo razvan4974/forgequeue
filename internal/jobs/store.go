@@ -103,10 +103,10 @@ func (s *Store) ClaimNextQueuedJob(ctx context.Context) (WorkerJob, bool, error)
 	return job, true, nil
 }
 
-func (s *Store) MarkJobSucceded(ctx context.Context, id int64) error {
+func (s *Store) MarkJobSucceeded(ctx context.Context, id int64) error {
 	query := `
 		UPDATE jobs
-		SET status = 'succeded', 
+		SET status = 'succeeded', 
 			completed_at = NOW(), 
 			updated_at = NOW()
 		WHERE id = $1
