@@ -35,6 +35,10 @@ func (w *Worker) Run(ctx context.Context, concurrency int) {
 }
 
 func (w *Worker) loop(ctx context.Context, workerNum int) {
+	// idle tracks whether this goroutine has already reported an empty queue, so
+	// the message is logged once per idle period instead of once per poll.
+	idle := false
+
 	for {
 		if ctx.Err() != nil {
 			return
@@ -58,7 +62,13 @@ func (w *Worker) loop(ctx context.Context, workerNum int) {
 		}
 
 		if found {
+			idle = false
 			continue
+		}
+
+		if !idle {
+			log.Printf("worker %d: queue empty, waiting", workerNum)
+			idle = true
 		}
 
 		select {
@@ -77,7 +87,6 @@ func (w *Worker) RunOnce(ctx context.Context) (bool, error) {
 	}
 
 	if !found {
-		log.Println("no queueed jobs found")
 		return false, nil
 	}
 

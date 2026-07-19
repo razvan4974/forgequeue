@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      TEST_DATABASE_URL: postgres://forgequeue:forgequeue@localhost:5432/forgequeue_test?sslmode=disable
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: forgequeue
+          POSTGRES_PASSWORD: forgequeue
+          POSTGRES_DB: forgequeue_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U forgequeue -d forgequeue_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Apply migrations
+        run: psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_create_jobs.sql
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Test with race detector
+        run: go test -race ./...
